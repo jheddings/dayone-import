@@ -10,6 +10,7 @@ class Journal:
     #---------------------------------------------------------------------------
     def __init__(self):
         self.entries = list()
+        self.name = None
 
     #---------------------------------------------------------------------------
     def add(self, entry):
@@ -41,12 +42,20 @@ class Entry:
         self.body = None
         self.tags = list()
         self.place = None
+        self.weather = None
 
         self.timestamp = datetime.now()
 
     #---------------------------------------------------------------------------
     def __repr__(self):
         return "Entry(%s)" % (self.title)
+
+    #---------------------------------------------------------------------------
+    def append(self, text):
+        if self.body is None:
+            self.body = text
+        else:
+            self.body += '\n{0}'.format(text)
 
     #---------------------------------------------------------------------------
     def text(self):
@@ -68,5 +77,56 @@ class Entry:
             'text' : self.text()
         }
 
+        if self.place is not None:
+            entry['location'] = self.place.json()
+
         return entry
 
+################################################################################
+class Location:
+
+    #---------------------------------------------------------------------------
+    def __init__(self):
+        self.name = None
+        self.city = None
+        self.state = None
+        self.country = None
+        self.longitude = None
+        self.latitude = None
+
+    #---------------------------------------------------------------------------
+    def json(self):
+        return {
+            'country' : self.country,
+            'placeName' : self.name,
+            'latitude' : self.latitude,
+            'longitude' : self.longitude,
+            'localityName' : self.city,
+            'region' : {
+                'radius' : 75,
+                'center' : {
+                    'latitude' : self.latitude,
+                    'longitude' : self.longitude,
+                }
+            }
+        }
+
+################################################################################
+class Weather:
+
+    #---------------------------------------------------------------------------
+    def __init__(self):
+        self.sunrise = None
+        self.sunset = None
+        self.conditions = None
+        self.temperature = None
+
+    #---------------------------------------------------------------------------
+    def json(self):
+        return {
+            "sunsetDate" : self.sunset.strftime('%Y-%m-%dT%H:%M:%S'),
+            "sunriseDate" : self.sunrise.strftime('%Y-%m-%dT%H:%M:%S'),
+            #"weatherCode" : "mostly-cloudy-night",
+            "conditionsDescription" : self.conditions,
+            "temperatureCelsius" : self.temperature
+        }
