@@ -31,14 +31,14 @@ def fb_post_as_entry(fb_post):
     if 'data' in fb_post:
         parse_fb_post_data(fb_post['data'], entry)
 
-    if 'attachments' in fb_post:
-        parse_fb_post_attachments(fb_post['attachments'], entry)
-
     if 'title' in fb_post:
         entry.title = fb_post['title']
 
     if 'tags' in fb_post:
         entry.tags = fb_post['tags']
+
+    if 'attachments' in fb_post:
+        parse_fb_post_attachments(fb_post['attachments'], entry)
 
     # assume times are UTC
     if 'timestamp' in fb_post:
@@ -76,8 +76,14 @@ def parse_fb_media(fb_media, entry):
     if 'media_metadata' not in fb_media:
         return
 
+    # posts seem to have redundant information, so let's try to quiet the noise...
+    has_existing_content = entry.body is not None
+
     uri = fb_media['uri']
     media_meta = fb_media['media_metadata']
+
+    if 'title' in fb_media and entry.title is None:
+        entry.title = fb_media['title']
 
     if 'photo_metadata' in media_meta:
         photo = dayone.Photo(fb_media['uri'])
@@ -87,7 +93,11 @@ def parse_fb_media(fb_media, entry):
 
     # FIXME handle videos properly...
     if 'video_metadata' in media_meta:
-        entry.append(f'video://{uri}')
+        entry.append(f'\n```video://{uri}```')
+
+    # posts seem to have redundant information, so let's try to quiet the noise...
+    if 'description' in fb_media and not has_existing_content:
+        entry.append(f'> {fb_media["description"]}')
 
 ################################################################################
 def parse_fb_photo_metadata(fb_photo_meta, entry):
