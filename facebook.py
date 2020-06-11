@@ -2,11 +2,12 @@
 
 import json
 import argparse
-import geocoder
 
 from datetime import datetime
 
 import dayone
+
+geocoder = dayone.Geocoder()
 
 ################################################################################
 # load all entries from the given JSON export from Facebook
@@ -46,15 +47,9 @@ def fb_post_as_entry(fb_post):
         entry.timestamp = datetime.fromtimestamp(fb_post['timestamp'])
 
     # for tracking / debugging...
-    entry.tags.append('debug-ts-{0}'.format(fb_post['timestamp']))
+    #entry.tags.append('debug-ts-{0}'.format(fb_post['timestamp']))
 
     return entry
-
-################################################################################
-def parse_fb_post_attachments(fb_attachments, entry):
-    for attachment in fb_attachments:
-        data = attachment['data']
-        parse_fb_post_data(data, entry)
 
 ################################################################################
 def parse_fb_post_data(fb_post_data, entry):
@@ -72,6 +67,12 @@ def parse_fb_post_data(fb_post_data, entry):
             parse_fb_external_context(data['external_context'], entry)
 
 ################################################################################
+def parse_fb_post_attachments(fb_attachments, entry):
+    for attachment in fb_attachments:
+        data = attachment['data']
+        parse_fb_post_data(data, entry)
+
+################################################################################
 def parse_fb_media(fb_media, entry):
     if 'uri' in fb_media:
         entry.photos.append(fb_media['uri'])
@@ -86,32 +87,30 @@ def parse_fb_media_metadata(fb_media_meta, entry):
 
 ################################################################################
 def parse_fb_photo_metadata(fb_photo_meta, entry):
-    if entry.place is None:
-        entry.place = dayone.Place()
-        if 'latitude' in fb_photo_meta:
-            entry.place.latitude = fb_photo_meta['latitude']
-        if 'longitude' in fb_photo_meta:
-            entry.place.longitude = fb_photo_meta['longitude']
+    if 'latitude' in fb_photo_meta and entry.place is None:
+        lat = fb_photo_meta['latitude']
+        lng = fb_photo_meta['longitude']
+
+        entry.place = geocoder.lookup([lat, lng], reverse=True)
 
 ################################################################################
 def parse_fb_place(fb_place, entry):
-    entry.place = dayone.Place()
-
-    if 'name' in fb_place:
-        entry.place.name = fb_place['name']
-
     if 'coordinate' in fb_place:
         coord = fb_place['coordinate']
-        entry.place.longitude = coord['longitude']
-        entry.place.latitude = coord['latitude']
+        lng = coord['longitude']
+        lat = coord['latitude']
+
+        entry.place = geocoder.lookup([lat, lng], reverse=True)
+
+        #TODO set entry timezone
+
+        if entry.place is not None:
+            if 'name' in fb_place:
+                entry.place.name = fb_place['name']
 
     if 'url' in fb_place:
         text = '<{0}>'.format(fb_place['url'])
         entry.append(text)
-
-    #TODO use address and geonames to get country & city
-    #TODO confirm we need to fill those in... will Day One do it automatically?
-    #TODO set timezone if we look up the geoname
 
     if 'address' in fb_place:
         entry.append(fb_place['address'])
