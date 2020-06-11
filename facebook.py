@@ -2,6 +2,7 @@
 
 import json
 import argparse
+import geocoder
 
 from datetime import datetime
 
@@ -18,6 +19,8 @@ def load_posts(fb_posts_file):
 
     for post in fb_posts:
         entry = fb_post_as_entry(post)
+        entry.tags.append('Facebook')
+        entry.tags.append('Facebook-Post')
         entries.append(entry)
 
     return entries
@@ -29,6 +32,9 @@ def fb_post_as_entry(fb_post):
     if 'data' in fb_post:
         parse_fb_post_data(fb_post['data'], entry)
 
+    if 'attachments' in fb_post:
+        parse_fb_post_attachments(fb_post['attachments'], entry)
+
     if 'title' in fb_post:
         entry.title = fb_post['title']
 
@@ -39,13 +45,82 @@ def fb_post_as_entry(fb_post):
     if 'timestamp' in fb_post:
         entry.timestamp = datetime.fromtimestamp(fb_post['timestamp'])
 
+    # for tracking / debugging...
+    entry.tags.append('debug-ts-{0}'.format(fb_post['timestamp']))
+
     return entry
 
 ################################################################################
+def parse_fb_post_attachments(fb_attachments, entry):
+    for attachment in fb_attachments:
+        data = attachment['data']
+        parse_fb_post_data(data, entry)
+
+################################################################################
 def parse_fb_post_data(fb_post_data, entry):
-    for entry_data in fb_post_data:
-        if 'post' in entry_data:
-            entry.body = entry_data['post']
+    for data in fb_post_data:
+        if 'post' in data:
+            entry.append(data['post'])
+
+        if 'media' in data:
+            parse_fb_media(data['media'], entry)
+
+        if 'place' in data:
+            parse_fb_place(data['place'], entry)
+
+        if 'external_context' in data:
+            parse_fb_external_context(data['external_context'], entry)
+
+################################################################################
+def parse_fb_media(fb_media, entry):
+    if 'uri' in fb_media:
+        entry.photos.append(fb_media['uri'])
+
+    if 'media_metadata' in fb_media:
+        parse_fb_media_metadata(fb_media['media_metadata'], entry)
+
+################################################################################
+def parse_fb_media_metadata(fb_media_meta, entry):
+    if 'photo_metadata' in fb_media_meta:
+        parse_fb_photo_metadata(fb_media_meta['photo_metadata'], entry)
+
+################################################################################
+def parse_fb_photo_metadata(fb_photo_meta, entry):
+    if entry.place is None:
+        entry.place = dayone.Location()
+        if 'latitude' in fb_photo_meta:
+            entry.place.latitude = fb_photo_meta['latitude']
+        if 'longitude' in fb_photo_meta:
+            entry.place.longitude = fb_photo_meta['longitude']
+
+################################################################################
+def parse_fb_place(fb_place, entry):
+    entry.place = dayone.Location()
+
+    if 'name' in fb_place:
+        entry.place.name = fb_place['name']
+
+    if 'coordinate' in fb_place:
+        coord = fb_place['coordinate']
+        entry.place.longitude = coord['longitude']
+        entry.place.latitude = coord['latitude']
+
+    if 'url' in fb_place:
+        text = '<{0}>'.format(fb_place['url'])
+        entry.append(text)
+
+    #TODO use address and geonames to get country & city
+    #TODO confirm we need to fill those in... will Day One do it automatically?
+    #TODO set timezone if we look up the geoname
+
+    if 'address' in fb_place:
+        entry.append(fb_place['address'])
+
+################################################################################
+def parse_fb_external_context(fb_ext, entry):
+    if 'url' in fb_ext:
+        text = '<{0}>'.format(fb_ext['url'])
+        entry.append(text)
 
 ################################################################################
 ## MAIN ENTRY
