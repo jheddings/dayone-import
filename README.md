@@ -14,6 +14,12 @@ The script operates on the JSON export data from your Facebook account.
 
 The script operates on the trips.html file.
 
+## Configuration
+
+TODO document the config file...
+
+Generally, `dayone.yaml` needs to provide the API keys for doing geolocation lookups.
+
 ## Dependencies
 
 These scripts use a number of libraries to assist with procesing:
