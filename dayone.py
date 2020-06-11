@@ -92,7 +92,7 @@ class Entry:
             self.body += f'\n{text}'
 
     #---------------------------------------------------------------------------
-    def text(self):
+    def markdown(self):
         text = ''
 
         if self.title is not None:
@@ -109,7 +109,7 @@ class Entry:
             'uuid' : self.id.hex,
             'creationDate' : _isotime(self.timestamp),
             'tags' : self.tags,
-            'text' : self.text()
+            'text' : self.markdown()
         }
 
         if self.place is not None:
@@ -147,6 +147,10 @@ class Photo:
         self.id = uuid.uuid4().hex
         self.path = path
         self.timestamp = None
+
+    #---------------------------------------------------------------------------
+    def markdown(self):
+        return f'![](dayone-moment://{self.id})'
 
     #---------------------------------------------------------------------------
     def digest(self):
@@ -206,6 +210,23 @@ class Place:
         place.country = loc.country
 
         return place
+
+    #---------------------------------------------------------------------------
+    def markdown(self):
+        text = ''
+
+        if self.name is not None:
+            text += f'## {self.name}\n'
+
+        location = ', '.join(filter(None, (self.city, self.state, self.country)))
+        if location is not None and len(location) > 0:
+            text += location + '\n'
+
+        if self.latitude is not None and self.longitude is not None:
+            text += f'GPS: {self.latitude}, {self.longitude}'
+
+        return text
+
     #---------------------------------------------------------------------------
     def json(self):
         return {

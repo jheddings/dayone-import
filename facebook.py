@@ -72,20 +72,22 @@ def parse_fb_post_attachments(fb_attachments, entry):
 
 ################################################################################
 def parse_fb_media(fb_media, entry):
-    # FIXME handle videos properly...
+    # XXX figure out a more graceful way of handling photos and videos...
+    if 'media_metadata' not in fb_media:
+        return
 
-    if 'uri' in fb_media:
+    uri = fb_media['uri']
+    media_meta = fb_media['media_metadata']
+
+    if 'photo_metadata' in media_meta:
         photo = dayone.Photo(fb_media['uri'])
         entry.photos.append(photo)
-        entry.append(f'![](dayone-moment://{photo.id})')
+        entry.append(photo.markdown())
+        parse_fb_photo_metadata(media_meta['photo_metadata'], entry)
 
-    if 'media_metadata' in fb_media:
-        parse_fb_media_metadata(fb_media['media_metadata'], entry)
-
-################################################################################
-def parse_fb_media_metadata(fb_media_meta, entry):
-    if 'photo_metadata' in fb_media_meta:
-        parse_fb_photo_metadata(fb_media_meta['photo_metadata'], entry)
+    # FIXME handle videos properly...
+    if 'video_metadata' in media_meta:
+        entry.append(f'video://{uri}')
 
 ################################################################################
 def parse_fb_photo_metadata(fb_photo_meta, entry):
@@ -94,6 +96,10 @@ def parse_fb_photo_metadata(fb_photo_meta, entry):
         lng = fb_photo_meta['longitude']
 
         entry.place = dayone.Place.lookup([lat, lng], reverse=True)
+
+################################################################################
+def parse_fb_video_metadata(fb_photo_meta, entry):
+    pass
 
 ################################################################################
 def parse_fb_place(fb_place, entry):
@@ -109,6 +115,8 @@ def parse_fb_place(fb_place, entry):
         if entry.place is not None:
             if 'name' in fb_place:
                 entry.place.name = fb_place['name']
+
+        entry.append(entry.place.markdown())
 
     if 'url' in fb_place:
         text = f'<{fb_place["url"]}>'
