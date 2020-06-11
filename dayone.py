@@ -2,6 +2,7 @@
 
 import json
 import geocoder
+import hashlib
 
 from datetime import datetime
 
@@ -16,6 +17,17 @@ class Journal:
     #---------------------------------------------------------------------------
     def add(self, entry):
         self.entries.append(entry)
+
+    #---------------------------------------------------------------------------
+    def export(self, filename=None):
+        data = self.json()
+
+        if filename is None:
+            print(json.dumps(data, indent=4))
+
+        else:
+            with open(filename, 'w') as outfile:
+                json.dump(data, outfile)
 
     #---------------------------------------------------------------------------
     def json(self):
@@ -47,6 +59,7 @@ class Entry:
         self.photos = list()
 
         self.timestamp = datetime.now()
+        self.timezone = None
 
     #---------------------------------------------------------------------------
     def __repr__(self):
@@ -82,10 +95,47 @@ class Entry:
         if self.place is not None:
             entry['location'] = self.place.json()
 
+        if self.timezone is not None:
+            entry['timeZoneName'] = self.timezone.tzname
+
         if self.weather is not None:
             entry['weather'] = self.weather.json()
 
+        #if len(self.photos) > 0:
+        #    entry['photos'] = self._json_photos()
+
         return entry
+
+    #---------------------------------------------------------------------------
+    def _json_photos(self):
+        photos_meta = list()
+
+        for photo in self.photos:
+            photo_meta = self._json_photo(photo)
+
+            if photo_meta is not None:
+                photos_meta.append(photo_meta)
+
+        return photos_meta
+
+    #---------------------------------------------------------------------------
+    def _json_photo(self, photo):
+        photo_meta = None
+
+        # FIXME need a way to reference the local photo file
+
+        try:
+            img = Image.open(photo)
+
+            photo_meta = {
+                'width' : img.width,
+                'height' : img.height,
+                'type' : img.format
+            }
+        except:
+            photo_meta = None
+
+        return photo_meta
 
 ################################################################################
 class Place:

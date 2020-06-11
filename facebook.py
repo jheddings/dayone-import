@@ -125,11 +125,9 @@ def parse_fb_external_context(fb_ext, entry):
 ## MAIN ENTRY
 
 argp = argparse.ArgumentParser()
-
 argp.add_argument('--posts', help='exported posts data')
 #argp.add_argument('--photos', help='exported photo album data')
 #argp.add_argument('--videos', help='exported video posts')
-
 args = argp.parse_args()
 
 journal = dayone.Journal()
@@ -138,6 +136,5 @@ if args.posts is not None:
     entries = load_posts(args.posts)
     journal.entries.extend(entries)
 
-journal_json = journal.json()
-print(json.dumps(journal_json, indent=4))
+journal.export()
 
