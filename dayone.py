@@ -1,9 +1,10 @@
-# define classes for creating Day One journal entries
+# define classes for handling Day One journal entries
 
 import json
-import yaml
-import geocoder
 import uuid
+
+# TODO add logger support
+# TODO add support for videos
 
 from datetime import datetime
 from PIL import Image, UnidentifiedImageError
@@ -23,15 +24,28 @@ class Journal:
 
     #---------------------------------------------------------------------------
     def export(self, filename):
-        data = self.json()
-        content = json.dumps(data)
-
-        # TODO make sure the journal name is file safe if specified internally
-        name = 'journal.json' if self.name is None else f'{self.name}.json'
-
-        # TODO add photos to zip file
         with ZipFile(filename, 'w') as myzip:
-            myzip.writestr(name, content)
+            self._zip_journal(myzip)
+            self._zip_photos(myzip)
+
+    #---------------------------------------------------------------------------
+    def _zip_journal(self, myzip):
+        data = self.json()
+        content = json.dumps(data, indent=4)
+
+        # TODO make sure the journal name is file safe
+        arcname = 'journal.json' if self.name is None else f'{self.name}.json'
+
+        myzip.writestr(arcname, content)
+
+    #---------------------------------------------------------------------------
+    def _zip_photos(self, myzip):
+        for entry in self.entries:
+            for photo in entry.photos:
+                # TODO determine extension from photo type
+                # TODO don't add if arcname exists in the archive
+                arcname = f'photos/{photo.digest()}.jpeg'
+                myzip.write(photo.path, arcname=arcname)
 
     #---------------------------------------------------------------------------
     def json(self):
@@ -135,36 +149,25 @@ class Photo:
         self.timestamp = None
 
     #---------------------------------------------------------------------------
-    def md5(self):
+    def digest(self):
         import hashlib
 
         md5 = hashlib.md5()
         with open(self.path, 'rb') as infile:
             md5.update(infile.read())
 
-        return md5
+        return md5.hexdigest()
 
     #---------------------------------------------------------------------------
     def json(self):
         # Day One uses the MD5 hash of the file to identify it by name in the export
-        md5 = self.md5()
-
         photo_meta = {
-            'md5' : md5.hexdigest()
+            'identifier' : self.id,
+            'md5' : self.digest()
         }
 
         if self.timestamp is not None:
             photo_meta['date'] = _isotime(self.timestamp)
-
-        try:
-            img = Image.open(self.path)
-
-            photo_meta['width'] = img.width
-            photo_meta['height'] = img.height
-            photo_meta['type'] = img.format
-
-        except UnidentifiedImageError:
-            pass
 
         return photo_meta
 
@@ -183,6 +186,8 @@ class Place:
     #---------------------------------------------------------------------------
     # TODO apply rate limit to API calls - https://docs.mapbox.com/api/#rate-limits
     def lookup(query, reverse=False):
+        import geocoder
+
         place = Place()
 
         # TODO use the provider preference from the config
@@ -224,6 +229,7 @@ class Place:
         }
 
 ################################################################################
+# XXX this is still mostly a stub...
 class Weather:
 
     #---------------------------------------------------------------------------
@@ -253,6 +259,8 @@ def _isotime(timestamp):
 
 ################################################################################
 ## load the config file
+
+import yaml
 
 # TODO improve error handling...
 config = None

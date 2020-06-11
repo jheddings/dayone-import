@@ -72,6 +72,8 @@ def parse_fb_post_attachments(fb_attachments, entry):
 
 ################################################################################
 def parse_fb_media(fb_media, entry):
+    # FIXME handle videos properly...
+
     if 'uri' in fb_media:
         photo = dayone.Photo(fb_media['uri'])
         entry.photos.append(photo)
@@ -117,6 +119,7 @@ def parse_fb_place(fb_place, entry):
 
 ################################################################################
 def parse_fb_external_context(fb_ext, entry):
+    # TODO generate small previews of external websites
     if 'url' in fb_ext:
         text = f'<{fb_ext["url"]}>'
         entry.append(text)
