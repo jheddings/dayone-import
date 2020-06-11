@@ -34,17 +34,17 @@ class Journal:
         entries = list()
 
         for entry in self.entries:
-            entry_json = entry.json()
-            entries.append(entry_json)
+            data = entry.json()
+            entries.append(data)
 
-        journal_json = {
+        data = {
             'metadata' : {
                 'version': '1.0'
             },
             'entries' : entries
         }
 
-        return journal_json
+        return data
 
 ################################################################################
 class Entry:
