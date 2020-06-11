@@ -27,7 +27,7 @@ class Journal:
         content = json.dumps(data)
 
         # TODO make sure the journal name is file safe if specified internally
-        name = 'journal.json' if self.name is None else '{0}.json'.format(self.name)
+        name = 'journal.json' if self.name is None else f'{self.name}.json'
 
         # TODO add photos to zip file
         with ZipFile(filename, 'w') as myzip:
@@ -75,14 +75,14 @@ class Entry:
         if self.body is None:
             self.body = text
         else:
-            self.body += '\n{0}'.format(text)
+            self.body += f'\n{text}'
 
     #---------------------------------------------------------------------------
     def text(self):
         text = ''
 
         if self.title is not None:
-            text += '# {0}\n'.format(self.title)
+            text += f'# {self.title}\n'
 
         if self.body is not None:
             text += self.body
@@ -185,7 +185,7 @@ class Place:
     def lookup(query, reverse=False):
         place = Place()
 
-        # TODO use the provider preference frmo the config
+        # TODO use the provider preference from the config
         api_key = config['mapbox']['key']
 
         if reverse is True:

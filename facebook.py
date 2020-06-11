@@ -45,7 +45,7 @@ def fb_post_as_entry(fb_post):
         entry.timestamp = datetime.fromtimestamp(fb_post['timestamp'])
 
     # for tracking / debugging...
-    #entry.tags.append('debug-ts-{0}'.format(fb_post['timestamp']))
+    #entry.tags.append(f'debug-ts-{fb_post["timestamp"]}')
 
     return entry
 
@@ -75,6 +75,7 @@ def parse_fb_media(fb_media, entry):
     if 'uri' in fb_media:
         photo = dayone.Photo(fb_media['uri'])
         entry.photos.append(photo)
+        entry.append(f'![](dayone-moment://{photo.id})')
 
     if 'media_metadata' in fb_media:
         parse_fb_media_metadata(fb_media['media_metadata'], entry)
@@ -108,7 +109,7 @@ def parse_fb_place(fb_place, entry):
                 entry.place.name = fb_place['name']
 
     if 'url' in fb_place:
-        text = '<{0}>'.format(fb_place['url'])
+        text = f'<{fb_place["url"]}>'
         entry.append(text)
 
     if 'address' in fb_place:
@@ -117,7 +118,7 @@ def parse_fb_place(fb_place, entry):
 ################################################################################
 def parse_fb_external_context(fb_ext, entry):
     if 'url' in fb_ext:
-        text = '<{0}>'.format(fb_ext['url'])
+        text = f'<{fb_ext["url"]}>'
         entry.append(text)
 
 ################################################################################
@@ -137,6 +138,4 @@ if args.posts is not None:
 
 # TODO make this an argument
 journal.export('fb_journal.zip')
-
-#print(json.dumps(journal.json(), indent=4))
 
