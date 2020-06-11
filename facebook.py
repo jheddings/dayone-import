@@ -87,7 +87,7 @@ def parse_fb_media_metadata(fb_media_meta, entry):
 ################################################################################
 def parse_fb_photo_metadata(fb_photo_meta, entry):
     if entry.place is None:
-        entry.place = dayone.Location()
+        entry.place = dayone.Place()
         if 'latitude' in fb_photo_meta:
             entry.place.latitude = fb_photo_meta['latitude']
         if 'longitude' in fb_photo_meta:
@@ -95,7 +95,7 @@ def parse_fb_photo_metadata(fb_photo_meta, entry):
 
 ################################################################################
 def parse_fb_place(fb_place, entry):
-    entry.place = dayone.Location()
+    entry.place = dayone.Place()
 
     if 'name' in fb_place:
         entry.place.name = fb_place['name']
