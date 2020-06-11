@@ -12,3 +12,12 @@ The script operates on the JSON export data from your Facebook account.
 ## Kayak
 
 The script operates on the trips.html file.
+
+## Dependencies
+
+These scripts use a number of libraries to assist with procesing:
+
+- PyYAML
+- Pillow
+- Geocoder
+

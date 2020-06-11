@@ -73,7 +73,8 @@ def parse_fb_post_attachments(fb_attachments, entry):
 ################################################################################
 def parse_fb_media(fb_media, entry):
     if 'uri' in fb_media:
-        entry.photos.append(fb_media['uri'])
+        photo = dayone.Photo(fb_media['uri'])
+        entry.photos.append(photo)
 
     if 'media_metadata' in fb_media:
         parse_fb_media_metadata(fb_media['media_metadata'], entry)
@@ -136,4 +137,6 @@ if args.posts is not None:
 
 # TODO make this an argument
 journal.export('fb_journal.zip')
+
+#print(json.dumps(journal.json(), indent=4))
 

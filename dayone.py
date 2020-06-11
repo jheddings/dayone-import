@@ -3,10 +3,10 @@
 import json
 import yaml
 import geocoder
-import hashlib
 import uuid
 
 from datetime import datetime
+from PIL import Image, UnidentifiedImageError
 from zipfile import ZipFile
 
 ################################################################################
@@ -93,7 +93,7 @@ class Entry:
     def json(self):
         entry = {
             'uuid' : self.id.hex,
-            'creationDate' : self.timestamp.strftime('%Y-%m-%dT%H:%M:%S'),
+            'creationDate' : _isotime(self.timestamp),
             'tags' : self.tags,
             'text' : self.text()
         }
@@ -107,8 +107,8 @@ class Entry:
         if self.weather is not None:
             entry['weather'] = self.weather.json()
 
-        #if len(self.photos) > 0:
-        #    entry['photos'] = self._json_photos()
+        if len(self.photos) > 0:
+            entry['photos'] = self._json_photos()
 
         return entry
 
@@ -117,30 +117,54 @@ class Entry:
         photos_meta = list()
 
         for photo in self.photos:
-            photo_meta = self._json_photo(photo)
+            photo_meta = photo.json()
 
             if photo_meta is not None:
                 photos_meta.append(photo_meta)
 
         return photos_meta
 
-    #---------------------------------------------------------------------------
-    def _json_photo(self, photo):
-        photo_meta = None
+################################################################################
+# TODO add support for remote photos, e.g. specify using path or uri
+class Photo:
 
-        # FIXME need a way to reference the local photo file
-        # this requires an MD5 of the photo with an identifier...  use photo name?
+    #---------------------------------------------------------------------------
+    def __init__(self, path):
+        self.id = uuid.uuid4().hex
+        self.path = path
+        self.timestamp = None
+
+    #---------------------------------------------------------------------------
+    def md5(self):
+        import hashlib
+
+        md5 = hashlib.md5()
+        with open(self.path, 'rb') as infile:
+            md5.update(infile.read())
+
+        return md5
+
+    #---------------------------------------------------------------------------
+    def json(self):
+        # Day One uses the MD5 hash of the file to identify it by name in the export
+        md5 = self.md5()
+
+        photo_meta = {
+            'md5' : md5.hexdigest()
+        }
+
+        if self.timestamp is not None:
+            photo_meta['date'] = _isotime(self.timestamp)
 
         try:
-            img = Image.open(photo)
+            img = Image.open(self.path)
 
-            photo_meta = {
-                'width' : img.width,
-                'height' : img.height,
-                'type' : img.format
-            }
-        except:
-            photo_meta = None
+            photo_meta['width'] = img.width
+            photo_meta['height'] = img.height
+            photo_meta['type'] = img.format
+
+        except UnidentifiedImageError:
+            pass
 
         return photo_meta
 
@@ -161,6 +185,7 @@ class Place:
     def lookup(query, reverse=False):
         place = Place()
 
+        # TODO use the provider preference frmo the config
         api_key = config['mapbox']['key']
 
         if reverse is True:
@@ -211,13 +236,20 @@ class Weather:
     #---------------------------------------------------------------------------
     def json(self):
         return {
-            "sunsetDate" : self.sunset.strftime('%Y-%m-%dT%H:%M:%S'),
-            "sunriseDate" : self.sunrise.strftime('%Y-%m-%dT%H:%M:%S'),
+            "sunsetDate" : _isotime(self.sunset),
+            "sunriseDate" : _isotime(self.sunrise),
             #"weatherCode" : "mostly-cloudy-night",
             "conditionsDescription" : self.conditions,
             "temperatureCelsius" : self.temperature
         }
 
+################################################################################
+# utility method for formatting timestamps
+def _isotime(timestamp):
+    if timestamp is None:
+        timestamp = datetime.now()
+
+    return timestamp.strftime('%Y-%m-%dT%H:%M:%S')
 
 ################################################################################
 ## load the config file
