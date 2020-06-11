@@ -1,6 +1,7 @@
 # define classes for creating Day One journal entries
 
 import json
+import yaml
 import geocoder
 import hashlib
 import uuid
@@ -153,6 +154,26 @@ class Place:
         self.latitude = None
 
     #---------------------------------------------------------------------------
+    # TODO apply rate limit to API calls - https://docs.mapbox.com/api/#rate-limits
+    def lookup(query, reverse=False):
+        place = Place()
+
+        api_key = config['mapbox']['key']
+
+        if reverse is True:
+            loc = geocoder.mapbox(query, method='reverse', key=api_key)
+        else:
+            loc = geocoder.mapbox(query, key=api_key)
+
+        place.name = loc.address
+        place.latitude = loc.lat
+        place.longitude = loc.lng
+        place.city = loc.city
+        place.state = loc.state
+        place.country = loc.country
+
+        return place
+    #---------------------------------------------------------------------------
     def json(self):
         return {
             'placeName' : self.name,
@@ -194,38 +215,13 @@ class Weather:
             "temperatureCelsius" : self.temperature
         }
 
+
 ################################################################################
-# TODO merge into Place class
-# TODO apply rate limit to API calls - https://docs.mapbox.com/api/#rate-limits
-class Geocoder:
+## load the config file
 
-    #---------------------------------------------------------------------------
-    def __init__(self, config='geocoder.json'):
-        self.api_key = None
-        self._load_config(config)
+# TODO improve error handling...
+config = None
 
-    #---------------------------------------------------------------------------
-    # FIXME this is kind of magic...  it would be better to document the config file
-    def _load_config(self, config_file):
-        with open(config_file) as fp:
-            config = json.load(fp)
-            self.api_key = config['mapbox']['key']
-
-    #---------------------------------------------------------------------------
-    def lookup(self, query, reverse=False):
-        place = Place()
-
-        if reverse is True:
-            loc = geocoder.mapbox(query, method='reverse', key=self.api_key)
-        else:
-            loc = geocoder.mapbox(query, key=self.api_key)
-
-        place.name = loc.address
-        place.latitude = loc.lat
-        place.longitude = loc.lng
-        place.city = loc.city
-        place.state = loc.state
-        place.country = loc.country
-
-        return place
+with open('dayone.yaml') as fp:
+    config = yaml.load(fp, Loader=yaml.Loader)
 

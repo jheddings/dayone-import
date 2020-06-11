@@ -7,8 +7,6 @@ from datetime import datetime
 
 import dayone
 
-geocoder = dayone.Geocoder()
-
 ################################################################################
 # load all entries from the given JSON export from Facebook
 def load_posts(fb_posts_file):
@@ -91,7 +89,7 @@ def parse_fb_photo_metadata(fb_photo_meta, entry):
         lat = fb_photo_meta['latitude']
         lng = fb_photo_meta['longitude']
 
-        entry.place = geocoder.lookup([lat, lng], reverse=True)
+        entry.place = dayone.Place.lookup([lat, lng], reverse=True)
 
 ################################################################################
 def parse_fb_place(fb_place, entry):
@@ -100,7 +98,7 @@ def parse_fb_place(fb_place, entry):
         lng = coord['longitude']
         lat = coord['latitude']
 
-        entry.place = geocoder.lookup([lat, lng], reverse=True)
+        entry.place = dayone.Place.lookup([lat, lng], reverse=True)
 
         #TODO set entry timezone
 
