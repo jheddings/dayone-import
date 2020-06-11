@@ -3,6 +3,7 @@
 import json
 import geocoder
 import hashlib
+import uuid
 
 from datetime import datetime
 
@@ -51,6 +52,7 @@ class Entry:
 
     #---------------------------------------------------------------------------
     def __init__(self):
+        self.id = uuid.uuid4()
         self.title = None
         self.body = None
         self.tags = list()
@@ -87,6 +89,7 @@ class Entry:
     #---------------------------------------------------------------------------
     def json(self):
         entry = {
+            'uuid' : self.id.hex,
             'creationDate' : self.timestamp.strftime('%Y-%m-%dT%H:%M:%S'),
             'tags' : self.tags,
             'text' : self.text()
