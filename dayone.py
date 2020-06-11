@@ -43,6 +43,7 @@ class Entry:
         self.tags = list()
         self.place = None
         self.weather = None
+        self.photos = list()
 
         self.timestamp = datetime.now()
 
@@ -98,11 +99,13 @@ class Location:
     def json(self):
         return {
             'country' : self.country,
+            'userLabel' : self.name,
             'placeName' : self.name,
             'latitude' : self.latitude,
             'longitude' : self.longitude,
             'localityName' : self.city,
             'region' : {
+                'identifier' : self.name,
                 'radius' : 75,
                 'center' : {
                     'latitude' : self.latitude,
@@ -130,3 +133,4 @@ class Weather:
             "conditionsDescription" : self.conditions,
             "temperatureCelsius" : self.temperature
         }
+
