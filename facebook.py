@@ -127,9 +127,14 @@ def parse_fb_place(fb_place, entry):
 
 ################################################################################
 def parse_fb_external_context(fb_ext, entry):
-    # TODO generate small previews of external websites
     if 'url' in fb_ext:
-        text = f'<{fb_ext["url"]}>'
+        # TODO generate small previews of external websites
+
+        if 'name' in fb_ext:
+            text = f'[{fb_ext["name"]}]({fb_ext["url"]})'
+        else:
+            text = f'<{fb_ext["url"]}>'
+
         entry.append(text)
 
 ################################################################################
