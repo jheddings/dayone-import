@@ -7,29 +7,31 @@ import hashlib
 import uuid
 
 from datetime import datetime
+from zipfile import ZipFile
 
 ################################################################################
 class Journal:
 
     #---------------------------------------------------------------------------
-    def __init__(self):
+    def __init__(self, name=None):
         self.entries = list()
-        self.name = None
+        self.name = name
 
     #---------------------------------------------------------------------------
     def add(self, entry):
         self.entries.append(entry)
 
     #---------------------------------------------------------------------------
-    def export(self, filename=None):
+    def export(self, filename):
         data = self.json()
+        content = json.dumps(data)
 
-        if filename is None:
-            print(json.dumps(data, indent=4))
+        # TODO make sure the journal name is file safe if specified internally
+        name = 'journal.json' if self.name is None else '{0}.json'.format(self.name)
 
-        else:
-            with open(filename, 'w') as outfile:
-                json.dump(data, outfile)
+        # TODO add photos to zip file
+        with ZipFile(filename, 'w') as myzip:
+            myzip.writestr(name, content)
 
     #---------------------------------------------------------------------------
     def json(self):
@@ -127,6 +129,7 @@ class Entry:
         photo_meta = None
 
         # FIXME need a way to reference the local photo file
+        # this requires an MD5 of the photo with an identifier...  use photo name?
 
         try:
             img = Image.open(photo)

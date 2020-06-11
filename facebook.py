@@ -128,11 +128,12 @@ argp.add_argument('--posts', help='exported posts data')
 #argp.add_argument('--videos', help='exported video posts')
 args = argp.parse_args()
 
-journal = dayone.Journal()
+journal = dayone.Journal(name='Facebook_Import')
 
 if args.posts is not None:
     entries = load_posts(args.posts)
     journal.entries.extend(entries)
 
-journal.export()
+# TODO make this an argument
+journal.export('fb_journal.zip')
 
