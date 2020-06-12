@@ -3,7 +3,7 @@
 import json
 import argparse
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import dayone
 
@@ -42,7 +42,7 @@ def fb_post_as_entry(fb_post):
 
     # assume times are UTC
     if 'timestamp' in fb_post:
-        entry.timestamp = datetime.fromtimestamp(fb_post['timestamp'])
+        entry.timestamp = datetime.fromtimestamp(fb_post['timestamp'], tz=timezone.utc)
 
     # for tracking / debugging...
     #entry.tags.append(f'debug-ts-{fb_post["timestamp"]}')

@@ -6,7 +6,7 @@ import uuid
 # TODO add logger support
 # TODO add support for videos
 
-from datetime import datetime
+from datetime import datetime, timezone
 from PIL import Image, UnidentifiedImageError
 from zipfile import ZipFile
 
@@ -21,6 +21,10 @@ class Journal:
     #---------------------------------------------------------------------------
     def add(self, entry):
         self.entries.append(entry)
+
+    #---------------------------------------------------------------------------
+    # TODO add import() for testing
+    #def import(self, filename):
 
     #---------------------------------------------------------------------------
     def export(self, filename):
@@ -82,7 +86,7 @@ class Entry:
 
     #---------------------------------------------------------------------------
     def __repr__(self):
-        return "Entry(%s)" % (self.title)
+        return "Entry(%s)" % (self.id.hex)
 
     #---------------------------------------------------------------------------
     def append(self, text):
@@ -150,7 +154,8 @@ class Photo:
 
     #---------------------------------------------------------------------------
     def markdown(self):
-        return f'![](dayone-moment://{self.id})'
+        # TODO add support for picture captions / alt text
+        return f'![{self.id}](dayone-moment://{self.id})'
 
     #---------------------------------------------------------------------------
     def digest(self):
@@ -177,6 +182,9 @@ class Photo:
 
 ################################################################################
 class Place:
+
+    # TODO add timeZone support
+    # http://api.geonames.org/timezone?lat=47.01&lng=10.2&username=demo
 
     #---------------------------------------------------------------------------
     def __init__(self):
@@ -276,7 +284,10 @@ def _isotime(timestamp):
     if timestamp is None:
         timestamp = datetime.now()
 
-    return timestamp.strftime('%Y-%m-%dT%H:%M:%S')
+    # Day One expects UTC timestamps
+    timestamp = timestamp.astimezone(tz=timezone.utc)
+
+    return timestamp.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 ################################################################################
 ## load the config file
@@ -288,4 +299,6 @@ config = None
 
 with open('dayone.yaml') as fp:
     config = yaml.load(fp, Loader=yaml.Loader)
+
+# TODO add __main__ section for local testing
 
