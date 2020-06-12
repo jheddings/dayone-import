@@ -1,9 +1,12 @@
 # define classes for handling Day One journal entries
 
+import re
 import json
 import uuid
 
-# TODO add logger support
+import logging
+import logging.config
+
 # TODO add support for videos
 
 from datetime import datetime, timezone
@@ -18,6 +21,9 @@ class Journal:
         self.entries = list()
         self.name = name
 
+        self.logger = logging.getLogger('dayone.Journal')
+        self.logger.info(f'New Journal: {self.name}')
+
     #---------------------------------------------------------------------------
     def add(self, entry):
         self.entries.append(entry)
@@ -28,6 +34,8 @@ class Journal:
 
     #---------------------------------------------------------------------------
     def export(self, filename):
+        self.logger.info(f'Begin journal export: {filename}')
+
         with ZipFile(filename, 'w') as myzip:
             self._zip_journal(myzip)
             self._zip_photos(myzip)
@@ -37,9 +45,14 @@ class Journal:
         data = self.json()
         content = json.dumps(data, indent=4)
 
-        # TODO make sure the journal name is file safe
-        arcname = 'journal.json' if self.name is None else f'{self.name}.json'
+        # make sure the journal name is file safe
+        if self.name is None:
+            arcname = 'journal.json'
+        else:
+            safename = re.sub(r'[^a-zA-Z0-9 _-]', '', self.name)
+            arcname = f'{safename}.json'
 
+        self.logger.debug(f'journal data: {arcname} - {len(content)} bytes')
         myzip.writestr(arcname, content)
 
     #---------------------------------------------------------------------------
@@ -49,6 +62,7 @@ class Journal:
                 # TODO determine extension from photo type
                 # TODO don't add if arcname exists in the archive
                 arcname = f'photos/{photo.digest()}.jpeg'
+                self.logger.debug(f'adding photo: {photo.path} => {arcname}')
                 myzip.write(photo.path, arcname=arcname)
 
     #---------------------------------------------------------------------------
@@ -83,6 +97,8 @@ class Entry:
 
         self.timestamp = datetime.now()
         self.timezone = None
+
+        self.logger = logging.getLogger('dayone.Entry')
 
     #---------------------------------------------------------------------------
     def __repr__(self):
@@ -151,6 +167,7 @@ class Photo:
         self.id = uuid.uuid4().hex
         self.path = path
         self.timestamp = None
+        self.logger = logging.getLogger('dayone.Photo')
 
     #---------------------------------------------------------------------------
     def markdown(self):
@@ -195,12 +212,15 @@ class Place:
         self.longitude = None
         self.latitude = None
 
+        self.logger = logging.getLogger('dayone.Place')
+
     #---------------------------------------------------------------------------
     # TODO apply rate limit to API calls - https://docs.mapbox.com/api/#rate-limits
     def lookup(query, reverse=False):
         import geocoder
 
         place = Place()
+        return place
 
         # TODO use the provider preference from the config
         api_key = config['mapbox']['key']
@@ -268,6 +288,8 @@ class Weather:
         self.conditions = None
         self.temperature = None
 
+        self.logger = logging.getLogger('dayone.Weather')
+
     #---------------------------------------------------------------------------
     def json(self):
         return {
@@ -282,7 +304,7 @@ class Weather:
 # utility method for formatting timestamps
 def _isotime(timestamp):
     if timestamp is None:
-        timestamp = datetime.now()
+        return None
 
     # Day One expects UTC timestamps
     timestamp = timestamp.astimezone(tz=timezone.utc)
@@ -299,6 +321,9 @@ config = None
 
 with open('dayone.yaml') as fp:
     config = yaml.load(fp, Loader=yaml.Loader)
+
+if 'logging' in config:
+    logging.config.dictConfig(config['logging'])
 
 # TODO add __main__ section for local testing
 
