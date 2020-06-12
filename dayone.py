@@ -198,8 +198,8 @@ class Photo:
     # TODO determine if the parameter is a filename or ZipFile
     def export(self, myzip):
 
-        # Day One does not require an extension, just the filename
-        arcname = f'photos/{self.digest()}'
+        # TODO get extension from photo type
+        arcname = f'photos/{self.digest()}.jpeg'
 
         # only add the photo if it doesn't exist in the archive...
 
