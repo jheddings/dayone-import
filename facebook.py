@@ -7,11 +7,12 @@ from datetime import datetime, timezone
 
 import dayone
 
+# TODO character encodings are not correct...
+
 ################################################################################
 # load all entries from the given JSON export from Facebook
-def load_posts(fb_posts_file):
+def load_posts(fb_posts_file, journal):
     fb_posts = None
-    entries = list()
 
     with open(fb_posts_file) as fp:
         fb_posts = json.load(fp)
@@ -20,9 +21,8 @@ def load_posts(fb_posts_file):
         entry = fb_post_as_entry(post)
         entry.tags.append('Facebook')
         entry.tags.append('Facebook-Post')
-        entries.append(entry)
 
-    return entries
+        journal.add(entry)
 
 ################################################################################
 def fb_post_as_entry(fb_post):
@@ -156,11 +156,10 @@ argp.add_argument('--posts', help='exported posts data')
 #argp.add_argument('--videos', help='exported video posts')
 args = argp.parse_args()
 
-journal = dayone.Journal(name='Facebook_Import')
+journal = dayone.Journal(name='Facebook Import')
 
 if args.posts is not None:
-    entries = load_posts(args.posts)
-    journal.entries.extend(entries)
+    entries = load_posts(args.posts, journal)
 
 # TODO make this an argument
 journal.export('fb_journal.zip')

@@ -22,10 +22,11 @@ class Journal:
         self.name = name
 
         self.logger = logging.getLogger('dayone.Journal')
-        self.logger.info(f'New Journal: {self.name}')
+        self.logger.info(f'New journal: {self.name}')
 
     #---------------------------------------------------------------------------
     def add(self, entry):
+        self.logger.debug(f'Adding journal entry: {entry.id.hex} -- {entry.title}')
         self.entries.append(entry)
 
     #---------------------------------------------------------------------------
@@ -167,7 +168,9 @@ class Photo:
         self.id = uuid.uuid4().hex
         self.path = path
         self.timestamp = None
+
         self.logger = logging.getLogger('dayone.Photo')
+        self.logger.debug(f'New photo: {self.id} -- {self.path}')
 
     #---------------------------------------------------------------------------
     def markdown(self):
@@ -220,7 +223,8 @@ class Place:
         import geocoder
 
         place = Place()
-        return place
+
+        place.logger.debug(f'Looking up place (reverse:{reverse}) -- {query}')
 
         # TODO use the provider preference from the config
         api_key = config['mapbox']['key']
@@ -229,6 +233,8 @@ class Place:
             loc = geocoder.mapbox(query, method='reverse', key=api_key)
         else:
             loc = geocoder.mapbox(query, key=api_key)
+
+        place.logger.debug(f'> result: {loc}')
 
         place.name = loc.address
         place.latitude = loc.lat
