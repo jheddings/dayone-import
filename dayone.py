@@ -34,12 +34,16 @@ class Journal:
     #def import(self, filename):
 
     #---------------------------------------------------------------------------
+    # TODO determine if the parameter is a filename or ZipFile
     def export(self, filename):
         self.logger.info(f'Begin journal export: {filename}')
 
         with ZipFile(filename, 'w') as myzip:
             self._zip_journal(myzip)
-            self._zip_photos(myzip)
+
+            for entry in self.entries:
+                for photo in entry.photos:
+                    photo.export(myzip)
 
     #---------------------------------------------------------------------------
     def _zip_journal(self, myzip):
@@ -55,16 +59,6 @@ class Journal:
 
         self.logger.debug(f'journal data: {arcname} - {len(content)} bytes')
         myzip.writestr(arcname, content)
-
-    #---------------------------------------------------------------------------
-    def _zip_photos(self, myzip):
-        for entry in self.entries:
-            for photo in entry.photos:
-                # TODO determine extension from photo type
-                # TODO don't add if arcname exists in the archive
-                arcname = f'photos/{photo.digest()}.jpeg'
-                self.logger.debug(f'adding photo: {photo.path} => {arcname}')
-                myzip.write(photo.path, arcname=arcname)
 
     #---------------------------------------------------------------------------
     def json(self):
@@ -199,6 +193,22 @@ class Photo:
             photo_meta['date'] = _isotime(self.timestamp)
 
         return photo_meta
+
+    #---------------------------------------------------------------------------
+    # TODO determine if the parameter is a filename or ZipFile
+    def export(self, myzip):
+        # TODO determine extension from photo type
+        arcname = f'photos/{self.digest()}.jpeg'
+
+        # only add the photo if it doesn't exist in the archive...
+
+        try:
+            info = myzip.getinfo(arcname)
+            self.logger.debug(f'photo exists in archive - skipping: {self.path}')
+
+        except KeyError:
+            self.logger.debug(f'adding photo to archive: {self.path} => {arcname}')
+            myzip.write(self.path, arcname=arcname)
 
 ################################################################################
 class Place:
