@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import dayone
 
 # TODO character encodings are not correct...
+# https://stackoverflow.com/questions/52747566/what-encoding-facebook-uses-in-json-files-from-data-export
 
 ################################################################################
 # load all entries from the given JSON export from Facebook
@@ -28,14 +29,14 @@ def load_posts(fb_posts_file, journal):
 def fb_post_as_entry(fb_post):
     entry = dayone.Entry()
 
-    if 'data' in fb_post:
-        parse_fb_post_data(fb_post['data'], entry)
+    if 'tags' in fb_post:
+        entry.tags = fb_post['tags']
 
     if 'title' in fb_post:
         entry.title = fb_post['title']
 
-    if 'tags' in fb_post:
-        entry.tags = fb_post['tags']
+    if 'data' in fb_post:
+        parse_fb_post_data(fb_post['data'], entry)
 
     if 'attachments' in fb_post:
         parse_fb_post_attachments(fb_post['attachments'], entry)
@@ -51,6 +52,8 @@ def fb_post_as_entry(fb_post):
 
 ################################################################################
 def parse_fb_post_data(fb_post_data, entry):
+    # XXX do we want to look for hashtags in the post and add entry tags?
+
     for data in fb_post_data:
         if 'post' in data:
             entry.append(data['post'])
