@@ -11,7 +11,6 @@ import logging.config
 # TODO add support for videos
 
 from datetime import datetime, timezone
-from PIL import Image, UnidentifiedImageError
 from zipfile import ZipFile
 
 ################################################################################

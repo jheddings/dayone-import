@@ -24,7 +24,6 @@ Generally, `dayone.yaml` needs to provide the API keys for doing geolocation loo
 
 These scripts use a number of libraries to assist with procesing:
 
-- PyYAML
-- Pillow
-- Geocoder
+- PyYAML - for loading config files
+- Geocoder - for looking up places
 
