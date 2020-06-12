@@ -1,6 +1,7 @@
 # define classes for handling Day One journal entries
 
 import re
+import os
 import json
 import uuid
 
@@ -197,8 +198,9 @@ class Photo:
     #---------------------------------------------------------------------------
     # TODO determine if the parameter is a filename or ZipFile
     def export(self, myzip):
-        # TODO determine extension from photo type
-        arcname = f'photos/{self.digest()}.jpeg'
+
+        # Day One does not require an extension, just the filename
+        arcname = f'photos/{self.digest()}'
 
         # only add the photo if it doesn't exist in the archive...
 
