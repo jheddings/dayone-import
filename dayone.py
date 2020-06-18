@@ -302,23 +302,19 @@ class Entry:
         return photos
 
 ################################################################################
-# TODO add support for remote photos, e.g. specify using path or uri
-# TODO add support for paths to photos embedded in a zipfile
-class Photo:
+class Media:
 
     #---------------------------------------------------------------------------
-    def __init__(self, path, id=None):
+    def __init__(self, id=None):
         if id is None:
             self.id = uuid.uuid4()
         else:
             self.id = id
 
-        self.path = path
-        self.timestamp = None
         self.caption = None
+        self.timestamp = None
 
-        self.logger = logging.getLogger('dayone.Photo')
-        self.logger.debug(f'New photo: {self.id} -- {self.path}')
+        self.logger = logging.getLogger('dayone.Media')
 
     #---------------------------------------------------------------------------
     def markdown(self):
@@ -326,6 +322,20 @@ class Photo:
             return f'![](dayone-moment://{self.id.hex})'
 
         return f'![{self.caption}](dayone-moment://{self.id.hex})'
+
+################################################################################
+# TODO add support for remote photos, e.g. specify using path or uri
+# TODO add support for paths to photos embedded in a zipfile
+class Photo(Media):
+
+    #---------------------------------------------------------------------------
+    def __init__(self, path, id=None):
+        Media.__init__(self, id=id)
+
+        self.path = path
+
+        self.logger = logging.getLogger('dayone.Photo')
+        self.logger.debug(f'New photo: {self.id} -- {self.path}')
 
     #---------------------------------------------------------------------------
     def digest(self):
