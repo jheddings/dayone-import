@@ -164,6 +164,9 @@ journal = dayone.Journal(name='Facebook Import')
 if args.posts is not None:
     entries = load_posts(args.posts, journal)
 
+archive = dayone.Archive()
+archive.add(journal)
+
 # TODO make this an argument
-journal.export('fb_journal.zip')
+archive.save('fb_journal.zip')
 
