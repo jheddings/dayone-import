@@ -315,14 +315,17 @@ class Photo:
 
         self.path = path
         self.timestamp = None
+        self.caption = None
 
         self.logger = logging.getLogger('dayone.Photo')
         self.logger.debug(f'New photo: {self.id} -- {self.path}')
 
     #---------------------------------------------------------------------------
     def markdown(self):
-        # TODO add support for picture captions / alt text
-        return f'![{self.id}](dayone-moment://{self.id.hex})'
+        if self.caption is None:
+            return f'![](dayone-moment://{self.id.hex})'
+
+        return f'![{self.caption}](dayone-moment://{self.id.hex})'
 
     #---------------------------------------------------------------------------
     def digest(self):
@@ -339,9 +342,9 @@ class Photo:
 
     #---------------------------------------------------------------------------
     def serialize(self):
-        # Day One uses the MD5 hash of the file to identify it by name in the export
         data = {
             'identifier' : self.id.hex,
+            'title' : self.caption,
             'md5' : self.digest()
         }
 
@@ -362,6 +365,9 @@ class Photo:
         # TODO need to store and deserialize the photo name / md5
         if 'file_reference' in data:
             photo.name = data['file_reference']
+
+        if 'title' in data:
+            photo.caption = data['title']
 
         if 'date' in data:
             photo.timestamp = _parse_timestamp(data['date'])
