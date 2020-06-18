@@ -3,15 +3,127 @@
 import re
 import os
 import json
+import yaml
 import uuid
 
 import logging
 import logging.config
 
-# TODO add support for videos
+# XXX probably need to add a local working directoryto the config,
+#     especially a place where photos and videos can be managed
 
 from datetime import datetime, timezone
 from zipfile import ZipFile
+
+################################################################################
+class Archive:
+
+    #---------------------------------------------------------------------------
+    def __init__(self):
+        self.journals = list()
+        self.logger = logging.getLogger('dayone.Archive')
+
+    #---------------------------------------------------------------------------
+    def add(self, journal):
+        self.logger.debug(f'Adding journal: {journal.name}')
+        self.journals.append(journal)
+
+    #---------------------------------------------------------------------------
+    def load(filename):
+        archive = Archive()
+        archive.logger.info(f'Loading archive: {filename}')
+
+        with ZipFile(filename, 'r') as myzip:
+            for arcname in myzip.namelist():
+
+                # import all .json files in archive as journals
+                if arcname.endswith('.json'):
+                    archive.logger.debug(f'loading journal from archive: {arcname}')
+                    raw = myzip.read(arcname)
+                    data = json.loads(raw)
+                    journal = Journal.deserialize(data)
+                    archive.add(journal)
+
+            # TODO import photos - where to extract?
+            # TODO import videos - where to extract?
+
+        return archive
+
+    #---------------------------------------------------------------------------
+    def save(self, filename):
+        self.logger.info(f'Saving archive: {filename}')
+
+        with ZipFile(filename, 'w') as myzip:
+            for journal in self.journals:
+                self._zip_journal(journal, myzip)
+
+    #---------------------------------------------------------------------------
+    def dump(self):
+        self.logger.debug(f'dumping archive')
+
+        # dump as YAML with multiple docs in stream
+        # XXX this is nice for viewing, but harder to compare against the original
+        print('%YAML 1.2')
+
+        for journal in self.journals:
+            data = journal.serialize()
+            print("---\n" + yaml.dump(data))
+
+    #---------------------------------------------------------------------------
+    def _safe_journal_name(self, name):
+        if name is None:
+            return 'journal'
+
+        # make sure the journal name is file safe
+        return re.sub(r'[^a-zA-Z0-9 _-]', '', name)
+
+    #---------------------------------------------------------------------------
+    def _zip_journal(self, journal, myzip):
+        self._zip_journal_json(journal, myzip)
+
+        for entry in journal.entries:
+            for photo in entry.photos:
+                self._zip_photo(photo, myzip)
+
+    #---------------------------------------------------------------------------
+    def _zip_journal_json(self, journal, myzip):
+        # export the journal as json
+        data = journal.serialize()
+        content = json.dumps(data, indent=4)
+
+        # make sure the journal name is file safe
+        arcname = self._safe_journal_name(journal.name)
+        arcname = f'{arcname}.json'
+
+        self.logger.debug(f'journal data: {arcname} - {len(content)} bytes')
+        myzip.writestr(arcname, content)
+
+    #---------------------------------------------------------------------------
+    def _zip_entry_exists(self, myzip, arcname):
+        try:
+            info = myzip.getinfo(arcname)
+
+            # TODO improve logging information
+            self.logger.debug(f'{info}')
+
+        except KeyError:
+            pass
+
+        return False
+
+    #---------------------------------------------------------------------------
+    def _zip_photo(self, photo, myzip):
+
+        # TODO get extension from photo type
+        arcname = f'photos/{photo.digest()}.jpeg'
+
+        # only add the photo if it doesn't exist in the archive...
+        if self._zip_entry_exists(myzip, arcname):
+            self.logger.debug(f'photo exists in archive - skipping: {photo.path}')
+
+        else:
+            self.logger.debug(f'adding photo to archive: {photo.path} => {arcname}')
+            myzip.write(photo.path, arcname=arcname)
 
 ################################################################################
 class Journal:
@@ -26,46 +138,15 @@ class Journal:
 
     #---------------------------------------------------------------------------
     def add(self, entry):
-        self.logger.debug(f'Adding journal entry: {entry.id.hex} -- {entry.title}')
+        self.logger.debug(f'Adding journal entry: {entry.id} -- {entry.title}')
         self.entries.append(entry)
 
     #---------------------------------------------------------------------------
-    # TODO add import() for testing
-    #def import(self, filename):
-
-    #---------------------------------------------------------------------------
-    # TODO determine if the parameter is a filename or ZipFile
-    def export(self, filename):
-        self.logger.info(f'Begin journal export: {filename}')
-
-        with ZipFile(filename, 'w') as myzip:
-            self._zip_journal(myzip)
-
-            for entry in self.entries:
-                for photo in entry.photos:
-                    photo.export(myzip)
-
-    #---------------------------------------------------------------------------
-    def _zip_journal(self, myzip):
-        data = self.json()
-        content = json.dumps(data, indent=4)
-
-        # make sure the journal name is file safe
-        if self.name is None:
-            arcname = 'journal.json'
-        else:
-            safename = re.sub(r'[^a-zA-Z0-9 _-]', '', self.name)
-            arcname = f'{safename}.json'
-
-        self.logger.debug(f'journal data: {arcname} - {len(content)} bytes')
-        myzip.writestr(arcname, content)
-
-    #---------------------------------------------------------------------------
-    def json(self):
+    def serialize(self):
         entries = list()
 
         for entry in self.entries:
-            data = entry.json()
+            data = entry.serialize()
             entries.append(data)
 
         data = {
@@ -75,14 +156,34 @@ class Journal:
             'entries' : entries
         }
 
+        if self.name is not None:
+            data['name'] = self.name
+
         return data
+
+    #---------------------------------------------------------------------------
+    def deserialize(data):
+        journal = Journal()
+
+        if 'name' in data:
+            self.name = data['name']
+
+        for entry_data in data['entries']:
+            entry = Entry.deserialize(entry_data)
+            journal.add(entry)
+
+        return journal
 
 ################################################################################
 class Entry:
 
     #---------------------------------------------------------------------------
-    def __init__(self):
-        self.id = uuid.uuid4()
+    def __init__(self, id=None):
+        if id is None:
+            self.id = uuid.uuid4()
+        else:
+            self.id = id
+
         self.title = None
         self.body = None
         self.tags = list()
@@ -97,7 +198,7 @@ class Entry:
 
     #---------------------------------------------------------------------------
     def __repr__(self):
-        return "Entry(%s)" % (self.id.hex)
+        return "Entry(%s)" % (self.id)
 
     #---------------------------------------------------------------------------
     def append(self, text):
@@ -119,47 +220,99 @@ class Entry:
         return text
 
     #---------------------------------------------------------------------------
-    def json(self):
+    def serialize(self):
         entry = {
             'uuid' : self.id.hex,
-            'creationDate' : _isotime(self.timestamp),
+            'creationDate' : _format_timestamp(self.timestamp),
             'tags' : self.tags,
             'text' : self.markdown()
         }
 
         if self.place is not None:
-            entry['location'] = self.place.json()
+            entry['location'] = self.place.serialize()
 
         if self.timezone is not None:
             entry['timeZoneName'] = self.timezone.tzname
 
         if self.weather is not None:
-            entry['weather'] = self.weather.json()
+            entry['weather'] = self.weather.serialize()
 
         if len(self.photos) > 0:
-            entry['photos'] = self._json_photos()
+            entry['photos'] = self._serialize_photos()
+
+        # TODO process videos
 
         return entry
 
     #---------------------------------------------------------------------------
-    def _json_photos(self):
-        photos_meta = list()
+    def _serialize_photos(self):
+        data = list()
 
         for photo in self.photos:
-            photo_meta = photo.json()
+            photo_data = photo.serialize()
 
-            if photo_meta is not None:
-                photos_meta.append(photo_meta)
+            if photo_data is not None:
+                data.append(photo_data)
 
-        return photos_meta
+        return data
+
+    #---------------------------------------------------------------------------
+    def deserialize(data):
+        entry_id = None
+
+        if 'uuid' in data:
+            entry_id = uuid.UUID(hex=data['uuid'])
+
+        entry = Entry(id=entry_id)
+
+        if 'tags' in data:
+            entry.tags = data['tags']
+
+        if 'creationDate' in data:
+            entry.timestamp = _parse_timestamp(data['creationDate'])
+
+        if 'text' in data:
+            # TODO split title if present
+            text = data['text']
+            entry.body = text
+
+        if 'location' in data:
+            entry.place = Place.deserialize(data['location'])
+
+        if 'weather' in data:
+            entry.weather = Weather.deserialize(data['weather'])
+
+        if 'photos' in data:
+            entry.photos = Entry._deserialize_photos(data['photos'])
+
+        # TODO process timeZone
+        # TODO process videos
+
+        return entry
+
+    #---------------------------------------------------------------------------
+    def _deserialize_photos(data):
+        photos = list()
+
+        for photo_data in data:
+            photo = Photo.deserialize(photo_data)
+            if photo is not None:
+                photos.append(photo)
+
+        return photos
 
 ################################################################################
 # TODO add support for remote photos, e.g. specify using path or uri
+# TODO add support for paths to photos embedded in a zipfile
 class Photo:
 
     #---------------------------------------------------------------------------
-    def __init__(self, path):
-        self.id = uuid.uuid4().hex
+    def __init__(self, path, id=None):
+        if id is None:
+            self.id = uuid.uuid4()
+        else:
+            self.id = id
+
         self.path = path
         self.timestamp = None
 
@@ -169,11 +322,14 @@ class Photo:
     #---------------------------------------------------------------------------
     def markdown(self):
         # TODO add support for picture captions / alt text
-        return f'![{self.id}](dayone-moment://{self.id})'
+        return f'![{self.id}](dayone-moment://{self.id.hex})'
 
     #---------------------------------------------------------------------------
     def digest(self):
         import hashlib
+
+        if self.path is None:
+            return None
 
         md5 = hashlib.md5()
         with open(self.path, 'rb') as infile:
@@ -182,34 +338,35 @@ class Photo:
         return md5.hexdigest()
 
     #---------------------------------------------------------------------------
-    def json(self):
+    def serialize(self):
         # Day One uses the MD5 hash of the file to identify it by name in the export
-        photo_meta = {
-            'identifier' : self.id,
+        data = {
+            'identifier' : self.id.hex,
             'md5' : self.digest()
         }
 
         if self.timestamp is not None:
-            photo_meta['date'] = _isotime(self.timestamp)
+            data['date'] = _format_timestamp(self.timestamp)
 
-        return photo_meta
+        return data
 
     #---------------------------------------------------------------------------
-    # TODO determine if the parameter is a filename or ZipFile
-    def export(self, myzip):
+    def deserialize(data):
+        photo_id = None
 
-        # TODO get extension from photo type
-        arcname = f'photos/{self.digest()}.jpeg'
+        if 'identifier' in data:
+            photo_id = uuid.UUID(hex=data['identifier'])
 
-        # only add the photo if it doesn't exist in the archive...
+        photo = Photo(path=None, id=photo_id)
 
-        try:
-            info = myzip.getinfo(arcname)
-            self.logger.debug(f'photo exists in archive - skipping: {self.path}')
+        # TODO need to store and deserialize the photo name / md5
+        if 'file_reference' in data:
+            photo.name = data['file_reference']
 
-        except KeyError:
-            self.logger.debug(f'adding photo to archive: {self.path} => {arcname}')
-            myzip.write(self.path, arcname=arcname)
+        if 'date' in data:
+            photo.timestamp = _parse_timestamp(data['date'])
+
+        return photo
 
 ################################################################################
 class Place:
@@ -273,7 +430,7 @@ class Place:
         return text
 
     #---------------------------------------------------------------------------
-    def json(self):
+    def serialize(self):
         return {
             'placeName' : self.name,
             'latitude' : self.latitude,
@@ -294,32 +451,62 @@ class Place:
             }
         }
 
+    #---------------------------------------------------------------------------
+    def deserialize(data):
+        place = Place()
+
+        if 'placeName' in data:
+            place.name = data['placeName']
+
+        if 'localityName' in data:
+            place.city = data['localityName']
+
+        if 'administrativeArea' in data:
+            place.state = data['administrativeArea']
+
+        if 'country' in data:
+            place.country = data['country']
+
+        if 'latitude' in data and 'longitude' in data:
+            place.latitude = data['latitude']
+            place.longitude = data['longitude']
+
+        return place
+
 ################################################################################
 # XXX this is still mostly a stub...
 class Weather:
 
     #---------------------------------------------------------------------------
     def __init__(self):
-        self.sunrise = None
-        self.sunset = None
         self.conditions = None
         self.temperature = None
 
         self.logger = logging.getLogger('dayone.Weather')
 
     #---------------------------------------------------------------------------
-    def json(self):
+    def serialize(self):
         return {
-            "sunsetDate" : _isotime(self.sunset),
-            "sunriseDate" : _isotime(self.sunrise),
             #"weatherCode" : "mostly-cloudy-night",
             "conditionsDescription" : self.conditions,
             "temperatureCelsius" : self.temperature
         }
 
+    #---------------------------------------------------------------------------
+    def deserialize(data):
+        wx = Weather()
+
+        if 'temperatureCelsius' in data:
+            wx.temperature = data['temperatureCelsius']
+
+        if 'conditionsDescription' in data:
+            wx.conditions = data['conditionsDescription']
+
+        return wx
+
 ################################################################################
 # utility method for formatting timestamps
-def _isotime(timestamp):
+def _format_timestamp(timestamp):
     if timestamp is None:
         return None
 
@@ -329,9 +516,35 @@ def _isotime(timestamp):
     return timestamp.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 ################################################################################
-## load the config file
+# utility method for parsing timestamps
+def _parse_timestamp(timestamp):
+    ts = datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
+    ts = ts.replace(tzinfo=timezone.utc)
 
-import yaml
+    return ts
+
+################################################################################
+def main():
+    import argparse
+
+    argp = argparse.ArgumentParser()
+    argp.add_argument('--load', help='file to read import data')
+    argp.add_argument('--save', help='file to write export data')
+    #argp.add_argument('--config', help='use specified config file', default='dayone.yaml')
+    args = argp.parse_args()
+
+    archive = None
+
+    if args.load is not None:
+        archive = Archive.load(args.load)
+
+    if args.save is not None:
+        archive.save(args.save)
+    else:
+        archive.dump()
+
+################################################################################
+## load the config file
 
 # TODO improve error handling...
 config = None
@@ -342,5 +555,8 @@ with open('dayone.yaml') as fp:
 if 'logging' in config:
     logging.config.dictConfig(config['logging'])
 
-# TODO add __main__ section for local testing
+################################################################################
+## MAIN ENTRY
+if __name__ == '__main__':
+    main()
 
